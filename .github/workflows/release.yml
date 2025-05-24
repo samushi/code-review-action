@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'      # çdo tag v1.0.0, v2.3.1, …
+
+permissions:
+  contents: write   # duhet për të ri-shtyrë tag-un dhe për release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Klono repo-n
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0      # na duhet historia e plotë për të ri-taguar
+
+      # 2️⃣ Instalimi i Bun
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      # 3️⃣ Instalimi i varësive (lexon bun.lockb)
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # 4️⃣ Ndërto dist/ (skripti "package" në package.json, p.sh. ncc build)
+      - name: Build package
+        run: bun run package
+
+      # 5️⃣ Shto dist/ në commit + ri-tag (vetëm nëse ka ndryshime)
+      - name: Commit dist and retag
+        run: |
+          if [ -n "$(git status --porcelain dist)" ]; then
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git config --global user.name  "github-actions[bot]"
+            git add dist
+            git commit -m "chore: include dist for ${{ github.ref_name }}"
+            # Lëviz tag-un aktual në commit-in e ri
+            git tag -f ${{ github.ref_name }}
+            git push origin HEAD:main           # shty commit-in në main
+            git push --force origin ${{ github.ref_name }}   # ribë tag-un
+          fi
+
+      # 6️⃣ Krijo GitHub Release (softprops)
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

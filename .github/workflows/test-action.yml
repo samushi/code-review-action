@@ -1,0 +1,37 @@
+name: Test Action
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 1️⃣ Instalojmë Bun (për ta ndërtuar dist/)
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      # 2️⃣ Instalojmë varësitë & ndërtojmë
+      - name: Build local action (dist/)
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      # 3️⃣ Tani që dist/ ekziston, mund të thërrasim action-in lokal
+      - name: Run AI Code Review Action
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          ai-model: 'gpt-3.5-turbo'
+          post-comment: 'false'
+          fail-on-low-score: 'false'
