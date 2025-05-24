@@ -79,7 +79,7 @@ The default GITHUB_TOKEN injektohet automatikisht nga GitHub.
 
 ### Basic Usage
 ```yaml
-- uses: your-username/ai-code-review-action@v1
+- uses: samushi/react-code-review-action@v1
   with:
     openai-api-key: ${{ secrets.OPENAI_API_KEY }}
 ```
