@@ -37,19 +37,15 @@ jobs:
       - name: Commit dist and retag
         shell: bash
         run: |
-          # nëse ka ndryshime brenda dist/, shtoji me forcë (-f)
           if [ -n "$(git status --porcelain dist)" ]; then
             git config --global user.email "github-actions[bot]@users.noreply.github.com"
             git config --global user.name  "github-actions[bot]"
 
-            # 🔽 shtojmë me -f sepse dist/ është në .gitignore
             git add -f dist
             git commit -m "chore: include dist for ${{ github.ref_name }}"
 
-            # lëvizim tag-un e release-it te commit-i i sapo krijuar
             git tag -f ${{ github.ref_name }}
-            git push origin HEAD:main
-            git push --force origin ${{ github.ref_name }}
+            git push --force origin ${{ github.ref_name }}   # vetëm tag-u
           fi
 
       # 6️⃣ Krijo GitHub Release (softprops)
