@@ -1,0 +1,64 @@
+name: 'AI Code Review Agent'
+description: 'Advanced AI-powered code review for NextJS and React applications using LangChain and LangGraph'
+author: 'Your Name'
+
+branding:
+  icon: 'code'
+  color: 'blue'
+
+inputs:
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+    default: ${{ github.token }}
+
+  openai-api-key:
+    description: 'OpenAI API key for AI analysis'
+    required: true
+
+  ai-model:
+    description: 'OpenAI model to use for analysis'
+    required: false
+    default: 'gpt-4-turbo-preview'
+
+  file-patterns:
+    description: 'File patterns to analyze (comma-separated)'
+    required: false
+    default: '**/*.js,**/*.jsx,**/*.ts,**/*.tsx'
+
+  exclude-patterns:
+    description: 'File patterns to exclude (comma-separated)'
+    required: false
+    default: '**/node_modules/**,**/dist/**,**/.next/**'
+
+  min-score-threshold:
+    description: 'Minimum score threshold for approval recommendation'
+    required: false
+    default: '7'
+
+  post-comment:
+    description: 'Whether to post review comment on PR'
+    required: false
+    default: 'true'
+
+  fail-on-low-score:
+    description: 'Fail the action if score is below threshold'
+    required: false
+    default: 'false'
+
+outputs:
+  review-score:
+    description: 'Overall review score (1-10)'
+
+  recommendation:
+    description: 'AI recommendation (POSITIVE/NEGATIVE/NEEDS_CHANGES)'
+
+  issues-found:
+    description: 'Number of issues found'
+
+  review-summary:
+    description: 'Summary of the review'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
