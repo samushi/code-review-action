@@ -1,7 +1,13 @@
+type LlmProvider = "openai" | "anthropic" | "gemini" | "ollama";
 interface AgentConfig {
     githubToken: string;
-    openaiApiKey: string;
+    provider?: LlmProvider;
     model?: string;
+    openaiApiKey?: string;
+    anthropicApiKey?: string;
+    geminiApiKey?: string;
+    ollamaBaseUrl?: string;
+    stack?: "react" | "next" | "vue" | "nuxt" | "laravel" | "wordpress" | "django" | "flask";
     maxTokens?: number;
     filePatterns?: string[];
     excludePatterns?: string[];
@@ -18,6 +24,7 @@ export interface ReviewResult {
 export declare class GitHubAIReviewAgent {
     private octokit;
     private llm;
+    private forcedStack?;
     /** Compiled graph që ekspozon .invoke/.stream etj. */
     private graph;
     private filePatterns?;
@@ -25,6 +32,14 @@ export declare class GitHubAIReviewAgent {
     private postComment;
     constructor(config: AgentConfig);
     private createGraph;
+    /**
+     * Check if a filename matches any of the given patterns (glob-like)
+     */
+    private matchesPatterns;
+    /**
+     * Check if file should be included based on patterns
+     */
+    private shouldIncludeFile;
     private fetchPullRequestNode;
     private filterRelevantFilesNode;
     private analyzeCodeNode;
