@@ -9,6 +9,8 @@ import { ChatOllama } from "@langchain/ollama";
 import { z } from "zod";
 import { Octokit } from "@octokit/rest";
 
+import { detectStack, stackRole, Stack } from "./detect-stack";
+
 /* ----------------------  Zod Schemas  ---------------------- */
 
 const ReviewFindingSchema = z.object({
@@ -73,6 +75,7 @@ interface AgentConfig {
     geminiApiKey?: string;           // aka GOOGLE_GENERATIVE_AI_API_KEY
     ollamaBaseUrl?: string;          // http://localhost:11434
 
+    stack?: "react" | "next" | "vue" | "nuxt" | "laravel" | "wordpress" | "django" | "flask";
     maxTokens?: number;
     filePatterns?: string[];
     excludePatterns?: string[];
@@ -130,6 +133,7 @@ function buildLLM(cfg: AgentConfig) {
 export class GitHubAIReviewAgent {
     private octokit: Octokit;
     private llm: ReturnType<typeof buildLLM>;
+    private forcedStack?: AgentConfig["stack"];
     /** Compiled graph që ekspozon .invoke/.stream etj. */
     private graph: Runnable<AgentState, Partial<AgentState>>;
 
@@ -140,6 +144,8 @@ export class GitHubAIReviewAgent {
     constructor(config: AgentConfig) {
         this.octokit = new Octokit({ auth: config.githubToken });
         this.llm     = buildLLM(config);
+        /* keep user override, if provided */
+        this.forcedStack = config.stack;
         this.filePatterns = config.filePatterns;
         this.excludePatterns = config.excludePatterns;
         this.postComment = config.postComment ?? true;
@@ -407,8 +413,16 @@ DELETIONS: ${f.deletions}
 ${f.patch}
 </PATCH>`).join("\n---\n");
 
+        const detected: Stack = detectStack(
+            files.map(f => ({ filename: f.filename, patch: f.patch }))
+        );
+
+        const stack: Stack = (this.forcedStack as Stack) ?? detected;
+
+        const role = stackRole(stack);
+
         return `\
-You are a **senior React / Next.js code-reviewer** with deep knowledge of TypeScript, modern React patterns (hooks, server components, suspense) and secure web development practices.
+You are a **${role}**.
 
 Review the following pull-request and return a **single, minified JSON** that strictly matches the schema below.
 Focus on code quality, potential bugs, security vulnerabilities, maintainability and performance.
