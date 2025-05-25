@@ -283,7 +283,8 @@ export class GitHubAIReviewAgent {
 
             const relevantFiles = state.prData.files.filter(file => {
                 // Only include added or modified files with patches
-                if (file.status !== "added" && file.status !== "modified") return false;
+                // if (file.status !== "added" && file.status !== "modified") return false;
+                if (!["added", "modified", "renamed"].includes(file.status)) return false;
                 if (!file.patch) return false;
 
                 // Apply file pattern filtering
