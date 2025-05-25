@@ -1,7 +1,12 @@
+type LlmProvider = "openai" | "anthropic" | "gemini" | "ollama";
 interface AgentConfig {
     githubToken: string;
-    openaiApiKey: string;
+    provider?: LlmProvider;
     model?: string;
+    openaiApiKey?: string;
+    anthropicApiKey?: string;
+    geminiApiKey?: string;
+    ollamaBaseUrl?: string;
     maxTokens?: number;
     filePatterns?: string[];
     excludePatterns?: string[];
@@ -25,6 +30,14 @@ export declare class GitHubAIReviewAgent {
     private postComment;
     constructor(config: AgentConfig);
     private createGraph;
+    /**
+     * Check if a filename matches any of the given patterns (glob-like)
+     */
+    private matchesPatterns;
+    /**
+     * Check if file should be included based on patterns
+     */
+    private shouldIncludeFile;
     private fetchPullRequestNode;
     private filterRelevantFilesNode;
     private analyzeCodeNode;
