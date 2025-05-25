@@ -44,7 +44,7 @@ inputs:
   file-patterns:
     description: "Comma-separated glob patterns to include"
     required: false
-    default: "**/*.{js,jsx,ts,tsx,php,py}"
+    default: "**/*.{js,jsx,ts,tsx,vue,php,blade.php,py,json,yml}"
 
   exclude-patterns:
     description: "Comma-separated glob patterns to ignore"

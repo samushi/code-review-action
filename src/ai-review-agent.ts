@@ -235,7 +235,7 @@ export class GitHubAIReviewAgent {
 
         // Default: include common React/Next.js files if no patterns specified
         // Fallback: common frontend extensions
-        return /\.(js|jsx|ts|tsx|vue|svelte)$/.test(filename);
+        return /\.(js|jsx|ts|tsx|vue|svelte|php|blade\.php|py|json|yml)$/.test(filename);
     }
 
     /* ----------------------  Node implementations  ---------------------- */
@@ -284,8 +284,13 @@ export class GitHubAIReviewAgent {
             const relevantFiles = state.prData.files.filter(file => {
                 // Only include added or modified files with patches
                 // if (file.status !== "added" && file.status !== "modified") return false;
-                if (!["added", "modified", "renamed"].includes(file.status)) return false;
-                if (!file.patch) return false;
+                // if (!["added", "modified", "renamed"].includes(file.status)) return false;
+                // if (!file.patch) return false;
+
+                if (!["added", "modified"].includes(file.status)) {
+                    if (file.status === "renamed") return true;
+                    return false;
+                }
 
                 // Apply file pattern filtering
                 return this.shouldIncludeFile(file.filename);
@@ -293,14 +298,21 @@ export class GitHubAIReviewAgent {
 
             console.log(`📁 ${relevantFiles.length} file relevante për review`);
 
+            // if (relevantFiles.length === 0) {
+            //     const patternsInfo = this.filePatterns
+            //         ? ` (patterns: ${this.filePatterns.join(', ')})`
+            //         : '';
+            //     return {
+            //         error: `S'ka file që përputhen me kriteret për review${patternsInfo}`,
+            //         completed: true,
+            //     };
+            // }
+
             if (relevantFiles.length === 0) {
-                const patternsInfo = this.filePatterns
-                    ? ` (patterns: ${this.filePatterns.join(', ')})`
-                    : '';
-                return {
-                    error: `S'ka file që përputhen me kriteret për review${patternsInfo}`,
-                    completed: true,
-                };
+                console.log(
+                    "ℹ️  No source files matched the review patterns – skipping AI analysis."
+                );
+                return { completed: true };
             }
 
             // Log which files were selected for transparency
