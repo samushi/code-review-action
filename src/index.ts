@@ -3,9 +3,15 @@ import * as github from "@actions/github";
 import { GitHubAIReviewAgent, ReviewResult } from "./ai-review-agent";
 import { parseFilePatterns } from "./utils";
 
+/* ────────────────────────── Types ────────────────────────── */
+
 interface ActionInputs {
+    provider: "openai" | "anthropic" | "gemini" | "ollama";
     githubToken: string;
-    openaiApiKey: string;
+    openaiApiKey?: string;
+    anthropicApiKey?: string;
+    geminiApiKey?: string;
+    ollamaBaseUrl?: string;
     aiModel: string;
     filePatterns: string[];
     excludePatterns: string[];
@@ -14,11 +20,19 @@ interface ActionInputs {
     failOnLowScore: boolean;
 }
 
+/* ────────────────────────── Helpers ─────────────────────── */
+
 function getInputs(): ActionInputs {
     return {
+        provider: (core.getInput("provider") || "openai") as ActionInputs["provider"],
+
         githubToken: core.getInput("github-token", { required: true }),
-        openaiApiKey: core.getInput("openai-api-key", { required: true }),
-        aiModel: core.getInput("ai-model") || "gpt-4-turbo-preview",
+        openaiApiKey: core.getInput("openai-api-key"),
+        anthropicApiKey: core.getInput("anthropic-api-key"),
+        geminiApiKey: core.getInput("gemini-api-key"),
+        ollamaBaseUrl: core.getInput("ollama-base-url") || undefined,
+
+        aiModel: core.getInput("ai-model") || "gpt-4o-mini",
         filePatterns: parseFilePatterns(core.getInput("file-patterns")),
         excludePatterns: parseFilePatterns(core.getInput("exclude-patterns")),
         minScoreThreshold: parseInt(core.getInput("min-score-threshold")) || 7,
@@ -27,6 +41,8 @@ function getInputs(): ActionInputs {
     };
 }
 
+/* ────────────────────────── Main  ───────────────────────── */
+
 async function run(): Promise<void> {
     try {
         core.info("🚀 Starting AI Code Review Action");
@@ -34,7 +50,6 @@ async function run(): Promise<void> {
         const inputs = getInputs();
         const context = github.context;
 
-        // Validate PR context
         if (!context.payload.pull_request) {
             core.setFailed("❌ This action can only be run on pull requests");
             return;
@@ -45,17 +60,22 @@ async function run(): Promise<void> {
 
         core.info(`📋 Reviewing PR #${pullNumber} in ${owner}/${repo}`);
 
-        // Initialize AI agent
+        /* Initialize agent */
         const agent = new GitHubAIReviewAgent({
+            provider: inputs.provider,
             githubToken: inputs.githubToken,
             openaiApiKey: inputs.openaiApiKey,
+            anthropicApiKey: inputs.anthropicApiKey,
+            geminiApiKey: inputs.geminiApiKey,
+            ollamaBaseUrl: inputs.ollamaBaseUrl,
+
             model: inputs.aiModel,
             filePatterns: inputs.filePatterns,
             excludePatterns: inputs.excludePatterns,
             postComment: inputs.postComment,
         });
 
-        // Run review
+        /* Run review */
         const result: ReviewResult = await agent.reviewPullRequest(
             owner,
             repo,
@@ -67,18 +87,17 @@ async function run(): Promise<void> {
             return;
         }
 
-        // Set outputs
+        /* Outputs */
         core.setOutput("review-score", result.score?.toString() || "0");
         core.setOutput("recommendation", result.recommendation || "UNKNOWN");
         core.setOutput("issues-found", result.issuesCount?.toString() || "0");
         core.setOutput("review-summary", result.summary || "No summary available");
 
-        // Log results
         core.info(`📊 Review Score: ${result.score}/10`);
         core.info(`📝 Recommendation: ${result.recommendation}`);
         core.info(`🔍 Issues Found: ${result.issuesCount || 0}`);
 
-        // Check if should fail based on score
+        /* CI gate */
         if (
             inputs.failOnLowScore &&
             result.score !== undefined &&
@@ -92,11 +111,10 @@ async function run(): Promise<void> {
 
         core.info("✅ AI Code Review completed successfully");
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "Unknown error occurred";
-        core.setFailed(`❌ Action failed: ${errorMessage}`);
+        const msg = error instanceof Error ? error.message : "Unknown error";
+        core.setFailed(`❌ Action failed: ${msg}`);
     }
 }
 
-// Execute the action
+/* Run the action */
 run();
