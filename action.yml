@@ -1,64 +1,83 @@
-name: 'AI Code Review Agent'
-description: 'Advanced AI-powered code review for NextJS and React applications using LangChain and LangGraph'
-author: 'Your Name'
+name: AI Code Review Agent
+description: "AI-powered, auto-stack code reviews for PRs (React/Next, Vue/Nuxt, Laravel/WordPress, Django/Flask …)"
+author: "Sami Maxhuni"
 
 branding:
-  icon: 'code'
-  color: 'blue'
+  icon: code
+  color: blue
 
+# ────────────────────────────── Inputs ──────────────────────────────
 inputs:
   github-token:
-    description: 'GitHub token for API access'
+    description: "GitHub token with repo scope (PR comments)"
     required: true
     default: ${{ github.token }}
 
+  provider:
+    description: "LLM provider: openai | anthropic | gemini | ollama"
+    required: false
+    default: openai
+
   openai-api-key:
-    description: 'OpenAI API key for AI analysis'
-    required: true
+    description: "OpenAI API key (if provider = openai)"
+    required: false
+  anthropic-api-key:
+    description: "Anthropic Claude API key (if provider = anthropic)"
+    required: false
+  gemini-api-key:
+    description: "Google Generative AI key (if provider = gemini)"
+    required: false
+  ollama-base-url:
+    description: "Base URL of your Ollama server (if provider = ollama)"
+    required: false
+    default: http://localhost:11434
 
   ai-model:
-    description: 'OpenAI model to use for analysis'
+    description: "Model name for the chosen provider"
     required: false
-    default: 'gpt-4-turbo-preview'
+    default: gpt-4o-mini
+
+  stack:
+    description: "Force stack (react, vue, laravel, django, …) or leave blank for auto-detect"
+    required: false
 
   file-patterns:
-    description: 'File patterns to analyze (comma-separated)'
+    description: "Comma-separated glob patterns to include"
     required: false
-    default: '**/*.js,**/*.jsx,**/*.ts,**/*.tsx'
+    default: "**/*.{js,jsx,ts,tsx,php,py}"
 
   exclude-patterns:
-    description: 'File patterns to exclude (comma-separated)'
+    description: "Comma-separated glob patterns to ignore"
     required: false
-    default: '**/node_modules/**,**/dist/**,**/.next/**'
+    default: "**/{node_modules,dist}/**"
 
   min-score-threshold:
-    description: 'Minimum score threshold for approval recommendation'
+    description: "Minimum score before failing CI (with fail-on-low-score = true)"
     required: false
-    default: '7'
+    default: "7"
 
   post-comment:
-    description: 'Whether to post review comment on PR'
+    description: "Whether to post the AI report as a PR comment"
     required: false
-    default: 'true'
+    default: "true"
 
   fail-on-low-score:
-    description: 'Fail the action if score is below threshold'
+    description: "Fail the job when review-score < min-score-threshold"
     required: false
-    default: 'false'
+    default: "false"
 
+# ───────────────────────────── Outputs ─────────────────────────────
 outputs:
   review-score:
-    description: 'Overall review score (1-10)'
-
+    description: "Numeric score (1-10)"
   recommendation:
-    description: 'AI recommendation (POSITIVE/NEGATIVE/NEEDS_CHANGES)'
-
+    description: "POSITIVE | NEEDS_CHANGES | NEGATIVE"
   issues-found:
-    description: 'Number of issues found'
-
+    description: "Number of findings reported by the AI"
   review-summary:
-    description: 'Summary of the review'
+    description: "One-paragraph summary of the review"
 
+# ───────────────────────────── Runner ───────────────────────────────
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: node20
+  main: dist/index.js
