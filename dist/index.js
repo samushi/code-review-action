@@ -47183,47 +47183,71 @@ class GitHubAIReviewAgent {
     /* ----------------------  Helpers  ---------------------- */
     createAnalysisPrompt(files, prData) {
         const filesContent = files
-            .map((f) => `
+            .map((f) => `\
 FILE: ${f.filename}
-SHTESA: ${f.additions}
-FSHIRJE: ${f.deletions}
-PATCH:
-${f.patch}
-`)
-            .join("\n---\n");
-        return `
-Ti je ekspert në NextJS/React code-review.
-PR Title: ${prData.title}
-PR Body: ${prData.body}
+ADDITIONS: ${f.additions}
+DELETIONS: ${f.deletions}
 
+<PATCH>
+${f.patch}
+</PATCH>`).join("\n---\n");
+        return `\
+You are a **senior React / Next.js code-reviewer** with deep knowledge of TypeScript, modern React patterns (hooks, server components, suspense) and secure web development practices.
+
+Review the following pull-request and return a **single, minified JSON** that strictly matches the schema below.
+Focus on code quality, potential bugs, security vulnerabilities, maintainability and performance.
+
+━━━━━━━━━━━━━━━━━━━━━━━━  PR  ━━━━━━━━━━━━━━━━━━━━━━━━
+• **Title:** ${prData.title}
+• **Description:** ${prData.body}
+
+━━━━━━━━━━━━━━━━━━━━━━  CHANGED FILES  ━━━━━━━━━━━━━━━
 ${filesContent}
 
-Kthe JSON me formatin:
+━━━━━━━━━━━━━━━━━━━━━━  JSON SCHEMA  ━━━━━━━━━━━━━━━━
 {
   "overall_score": 1-10,
   "recommendation": "POSITIVE" | "NEGATIVE" | "NEEDS_CHANGES",
-  "summary": "...",
-  "detailed_findings": [...],
-  "positive_aspects": [...],
-  "areas_for_improvement": [...]
-}`;
+  "summary": "single concise paragraph",
+  "detailed_findings": [
+    {
+      "category": "QUALITY" | "SECURITY" | "FUNCTIONALITY" | "MAINTAINABILITY",
+      "severity": "HIGH" | "MEDIUM" | "LOW",
+      "file": "relative/path.tsx",
+      "line": 123,
+      "issue": "short explanation of the problem",
+      "suggestion": "precise fix or best-practice snippet"
+    }
+  ],
+  "positive_aspects": [ "bullet sentence …" ],
+  "areas_for_improvement": [ "bullet sentence …" ]
+}
+
+Rules:
+1. **Return only valid JSON** – no markdown, no comments.
+2. Omit fields that are optional and empty.
+3. Use absolute honesty; do not inflate the score.
+4. If the patch is too large to analyse in full, sample the most critical hunks.
+
+Output now:`;
     }
     parseAIResponse(txt) {
         try {
             const match = txt.match(/\{[\s\S]*\}/);
             if (!match)
-                throw new Error("JSON mungon");
+                throw new Error("JSON not found in LLM response");
             const parsed = JSON.parse(match[0]);
             return AIReviewSchema.parse(parsed);
         }
         catch {
+            // Fallback if the model returns malformed or non-JSON output
             return {
                 overall_score: 5,
                 recommendation: "NEEDS_CHANGES",
-                summary: "AI nuk dha JSON të vlefshëm, nevojitet review manual.",
+                summary: "The AI did not return valid JSON. Manual review required.",
                 detailed_findings: [],
                 positive_aspects: [],
-                areas_for_improvement: ["Manual review i nevojshëm"],
+                areas_for_improvement: ["Manual review required"],
             };
         }
     }
@@ -47235,33 +47259,29 @@ Kthe JSON me formatin:
                 : "⚠️";
         return `## ${emoji} AI Code Review Report
 
-### Vlerësimi: ${r.overall_score}/10
-**Rekomandimi:** ${r.recommendation}
+### Rating: ${r.overall_score}/10  
+**Recommendation:** ${r.recommendation}
 
-### Përmbledhje
+### Summary
 ${r.summary}
 
 ${r.positive_aspects.length
-            ? `### ✨ Aspektet pozitive\n${r.positive_aspects
+            ? `### ✨ Positive Aspects\n${r.positive_aspects
                 .map((a) => `- ${a}`)
                 .join("\n")}`
             : ""}
 
 ${r.detailed_findings.length
-            ? `### 🔍 Gjetjet\n${r.detailed_findings
-                .map((f) => `**${f.severity}** - \`${f.file}\`${f.line ? ` (Line ${f.line})` : ""}\n- **${f.category}**\n- Problem: ${f.issue}\n- Sugjerim: ${f.suggestion}`)
+            ? `### 🔍 Findings\n${r.detailed_findings
+                .map((f) => `**${f.severity}** – \`${f.file}\`${f.line ? ` (Line ${f.line})` : ""}\n- **${f.category}**\n- Issue: ${f.issue}\n- Suggestion: ${f.suggestion}`)
                 .join("\n\n")}`
             : ""}
 
-${r.areas_for_improvement.length
-            ? `### 📈 Përmirësime\n${r.areas_for_improvement
-                .map((a) => `- ${a}`)
-                .join("\n")}`
-            : ""}
+${r.areas_for_improvement.length ? `### 📈 Areas for Improvement\n ${r.areas_for_improvement.map((a) => `- ${a}`).join("\n")}` : ""}
 
 ---
-*🤖 Gjeneruar nga AI Code Review Agent*
-*⚠️ Kontrollo manualisht pavarësisht rekomandimit*
+*🤖 Generated by AI Code Review Agent*  
+*⚠️ Please perform a manual review regardless of this recommendation*
 `;
     }
     /* ----------------------  Public API  ---------------------- */
