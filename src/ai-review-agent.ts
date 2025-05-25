@@ -181,18 +181,48 @@ export class GitHubAIReviewAgent {
         /* ----- Edges ----- */
         graph.addEdge("__start__", "fetchPR" as any);
 
-        graph.addConditionalEdges("fetchPR" as any, (s) =>
-            s.error ? "handleError" : "filterFiles"
-        );
-        graph.addConditionalEdges("filterFiles" as any, (s) =>
-            s.error ? "handleError" : "analyzeCode"
-        );
-        graph.addConditionalEdges("analyzeCode" as any, (s) =>
-            s.error ? "handleError" : "formatReview"
-        );
-        graph.addConditionalEdges("formatReview" as any, (s) =>
-            s.error ? "handleError" : "postReview"
-        );
+        // Depricated: because we handle completed state in filterFiles
+        // graph.addConditionalEdges("fetchPR" as any, (s) =>
+        //     s.error ? "handleError" : "filterFiles"
+        // );
+
+        graph.addConditionalEdges("fetchPR" as any, (s) => {
+            if (s.error)      return "handleError";
+            if (s.completed)  return END;      // ← NEW
+            return "filterFiles";
+        })
+
+        // Deprivated: because we handle completed state in filterFiles
+        // graph.addConditionalEdges("filterFiles" as any, (s) =>
+        //     s.error ? "handleError" : "analyzeCode"
+        // );
+        graph.addConditionalEdges("filterFiles" as any, (s) => {
+            if (s.error)      return "handleError";
+            if (s.completed)  return END;      // ← NEW
+            return "analyzeCode";
+        });
+
+        // Depricated: because we handle completed state in analyzeCode
+        // graph.addConditionalEdges("analyzeCode" as any, (s) =>
+        //     s.error ? "handleError" : "formatReview"
+        // );
+
+        graph.addConditionalEdges("analyzeCode" as any, (s) => {
+            if (s.error)      return "handleError";
+            if (s.completed)  return END;      // ← NEW
+            return "formatReview";
+        });
+
+        // Depricated: because we handle completed state in formatReview
+        // graph.addConditionalEdges("formatReview" as any, (s) =>
+        //     s.error ? "handleError" : "postReview"
+        // );
+
+        graph.addConditionalEdges("formatReview" as any, (s) => {
+            if (s.error)      return "handleError";
+            if (s.completed)  return END;      // ← NEW
+            return "postReview";
+        });
 
         graph.addConditionalEdges("postReview" as any, () => END);
         graph.addConditionalEdges("handleError" as any, () => END);
