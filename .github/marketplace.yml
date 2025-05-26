@@ -1,0 +1,6 @@
+name: AI Code Review Agent
+description: Automated code reviews powered by AI
+icon: icon.png
+categories:
+  - code-review
+  - ai
